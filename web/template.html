@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>笔迹分析 Graphology</title>
+<style>
+body{font-family:system-ui,"Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px;line-height:1.6}
+.note{background:#fff8e1;border:1px solid #f0d78c;padding:8px 12px;border-radius:6px;font-size:.9em;color:#333}
+.q{padding:10px 0;border-bottom:1px solid #ddd}
+.opts label{margin-right:14px;white-space:nowrap}
+button{font-size:1em;padding:8px 20px;margin:12px 8px 0 0}
+#result li{margin:8px 0}
+.lvl{font-weight:bold;margin-right:6px}
+</style>
+</head>
+<body>
+<h1>笔迹分析</h1>
+<p class="note">仅供娱乐：笔迹学缺乏科学依据，结果不应用于任何评估、招聘或决策。<br>
+Entertainment only: graphology has no scientific validity.</p>
+<p>请就每一项字迹特点，按其明显程度选择：没有 / 模糊 / 一般 / 明显。</p>
+<form id="form"></form>
+<button id="go">分析</button><button id="reset" type="button">重置</button>
+<div id="result"></div>
+<script>
+const DATA = /*DATA*/;
+const WEIGHTS = {N:0, F:1, G:2, O:4};
+const LABELS = {N:"没有", F:"模糊", G:"一般", O:"明显"};
+const form = document.getElementById("form");
+DATA.forEach((r, i) => {
+  const d = document.createElement("div");
+  d.className = "q";
+  d.innerHTML = `<div>${i+1}. ${r.ZJTD}</div><div class="opts">` +
+    Object.keys(LABELS).map(k =>
+      `<label><input type="radio" name="a${i}" value="${k}"${k==="N"?" checked":""}>${LABELS[k]}</label>`
+    ).join("") + `</div>`;
+  form.appendChild(d);
+});
+
+function analyse(answers) {
+  const sum = {}, cnt = {};
+  DATA.forEach((r, i) => {
+    sum[r.QZSX] = (sum[r.QZSX] || 0) + WEIGHTS[answers[i]];
+    cnt[r.QZSX] = (cnt[r.QZSX] || 0) + 1;
+  });
+  // normalise per group so larger groups are not favoured
+  const score = Object.keys(sum).map(g => [g, sum[g] / cnt[g]]).sort((a, b) => b[1] - a[1]);
+  if (Math.abs(score[0][1] - score[1][1]) < 1e-9) return null; // tie for top
+  return score[0][0];
+}
+
+document.getElementById("go").onclick = e => {
+  e.preventDefault();
+  const answers = DATA.map((_, i) => form.elements["a" + i].value);
+  const win = analyse(answers);
+  const out = document.getElementById("result");
+  if (!win) {
+    out.innerHTML = "<h2>分析失败</h2><p>可能原因：1. 各类性格特征过于接近；2. 回答存在偏差。建议重新分析一次。</p>";
+    return;
+  }
+  const rank = {O:0, G:1, F:2};
+  const items = DATA.map((r, i) => [r, answers[i]])
+    .filter(([r, a]) => r.QZSX === win && a !== "N")
+    .sort((x, y) => rank[x[1]] - rank[y[1]]);
+  out.innerHTML = "<h2>您的分析结果如下：</h2><ul>" +
+    items.map(([r, a]) => `<li><span class="lvl">${LABELS[a]}</span>${r.DYXG.replace(/\s+/g, "")}</li>`).join("") + "</ul>";
+  out.scrollIntoView();
+};
+document.getElementById("reset").onclick = () => { form.reset(); document.getElementById("result").innerHTML = ""; };
+</script>
+</body>
+</html>
