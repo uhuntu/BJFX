@@ -7,7 +7,14 @@
 <style>
 body{font-family:system-ui,"Microsoft YaHei",sans-serif;max-width:760px;margin:0 auto;padding:16px;line-height:1.6}
 .note{background:#fff8e1;border:1px solid #f0d78c;padding:8px 12px;border-radius:6px;font-size:.9em;color:#333}
-.q{padding:10px 0;border-bottom:1px solid #ddd}
+fieldset.q{border:1px solid #ddd;border-radius:6px;margin:10px 0;padding:8px 12px}
+fieldset.q legend{padding:0 6px}
+.srow{display:flex;align-items:center;gap:8px;margin:4px 0}
+.srow .gname{width:4.5em;flex:none}
+.srow .bar{flex:1;height:10px;background:#eee;border-radius:5px;overflow:hidden}
+.srow .bar span{display:block;height:100%;background:#4a76c9}
+.srow .val{width:4em;text-align:right;font-variant-numeric:tabular-nums;flex:none}
+#progress{color:#666;font-size:.9em}
 .opts label{margin-right:14px;white-space:nowrap}
 button{font-size:1em;padding:8px 20px;margin:12px 8px 0 0}
 #result li{margin:8px 0}
@@ -19,6 +26,7 @@ button{font-size:1em;padding:8px 20px;margin:12px 8px 0 0}
 <p class="note">仅供娱乐：笔迹学缺乏科学依据，结果不应用于任何评估、招聘或决策。<br>
 Entertainment only: graphology has no scientific validity.</p>
 <p>请就每一项字迹特点，按其明显程度选择：没有 / 模糊 / 一般 / 明显。</p>
+<p id="progress" aria-live="polite"></p>
 <form id="form"></form>
 <button id="go">分析</button><button id="reset" type="button">重置</button>
 <div id="result"></div>
@@ -28,31 +36,47 @@ const DATA = /*DATA*/;
 const LABELS = {N:"没有", F:"模糊", G:"一般", O:"明显"};
 const form = document.getElementById("form");
 DATA.forEach((r, i) => {
-  const d = document.createElement("div");
+  const d = document.createElement("fieldset");
   d.className = "q";
-  d.innerHTML = `<div>${i+1}. ${r.ZJTD}</div><div class="opts">` +
+  d.innerHTML = `<legend>${i+1}. ${r.ZJTD}</legend><div class="opts">` +
     Object.keys(LABELS).map(k =>
       `<label><input type="radio" name="a${i}" value="${k}"${k==="N"?" checked":""}>${LABELS[k]}</label>`
     ).join("") + `</div>`;
   form.appendChild(d);
 });
 
+const GROUPS = {DZ:"胆汁质", YY:"抑郁质", NY:"粘液质", DX:"多血质"};
+
+const progress = document.getElementById("progress");
+const updateProgress = () => {
+  const n = DATA.reduce((acc, _, i) => acc + (form.elements["a" + i].value !== "N"), 0);
+  progress.textContent = `已作答 ${n} / ${DATA.length}（未作答按“没有”计）`;
+};
+form.addEventListener("change", updateProgress);
+updateProgress();
+
 document.getElementById("go").onclick = e => {
   e.preventDefault();
   const answers = DATA.map((_, i) => form.elements["a" + i].value);
   const win = analyse(answers, DATA);
   const out = document.getElementById("result");
+  const bars = "<h3>四类气质得分（归一化，满分 4）</h3>" + scores(answers, DATA).map(([g, v]) =>
+    `<div class="srow"><span class="gname">${GROUPS[g] || g}</span>` +
+    `<span class="bar"><span style="width:${v / 4 * 100}%"></span></span>` +
+    `<span class="val">${v.toFixed(2)}</span></div>`
+  ).join("");
   if (!win) {
-    out.innerHTML = "<h2>分析失败</h2><p>可能原因：1. 各类性格特征过于接近；2. 回答存在偏差。建议重新分析一次。</p>";
+    out.innerHTML = "<h2>分析失败</h2>" + bars +
+      "<p>可能原因：1. 各类性格特征过于接近；2. 回答存在偏差。建议重新分析一次。</p>";
     return;
   }
   const rank = {O:0, G:1, F:2};
   const items = DATA.map((r, i) => [r, answers[i]])
     .filter(([r, a]) => r.QZSX === win && a !== "N")
     .sort((x, y) => rank[x[1]] - rank[y[1]]);
-  out.innerHTML = "<h2>您的分析结果如下：</h2><ul>" +
+  out.innerHTML = `<h2>您的分析结果：${GROUPS[win] || win}</h2>` + bars + "<ul>" +
     items.map(([r, a]) => `<li><span class="lvl">${LABELS[a]}</span>${r.DYXG}</li>`).join("") + "</ul>";
-  out.scrollIntoView();
+  out.scrollIntoView({behavior: "smooth"});
 };
 document.getElementById("reset").onclick = () => { form.reset(); document.getElementById("result").innerHTML = ""; };
 </script>
