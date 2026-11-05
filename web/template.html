@@ -78,7 +78,7 @@ document.getElementById("go").onclick = e => {
     items.map(([r, a]) => `<li><span class="lvl">${LABELS[a]}</span>${r.DYXG}</li>`).join("") + "</ul>";
   out.scrollIntoView({behavior: "smooth"});
 };
-document.getElementById("reset").onclick = () => { form.reset(); document.getElementById("result").innerHTML = ""; };
+document.getElementById("reset").onclick = () => { form.reset(); document.getElementById("result").innerHTML = ""; updateProgress(); };
 </script>
 </body>
 </html>
